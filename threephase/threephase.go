@@ -39,8 +39,12 @@ type threePhaseInternal struct {
 }
 
 func (this *threePhaseInternal) Create(request []byte) (success bool) {
+	return this.timedTransaction(request, this.ch.GetCreateSet)
+}
+
+func (this *threePhaseInternal) timedTransaction(request []byte, peerGetter func() ([]string, error)) (success bool) {
 	transactionID := strconv.Itoa(int(time.Now().UnixNano()))
-	nodes, err := this.ch.GetCreateSet()
+	nodes, err := peerGetter()
 	if err != nil {
 		return false
 	}
@@ -72,31 +76,20 @@ func (this *threePhaseInternal) Read(request []byte) (results []byte, success bo
 	return this.db.Merge(request, temporary)
 }
 
-func (this *threePhaseInternal) LocalRead(request []byte) (results []byte, success bool) {
-	return this.db.Read(request)
-}
-
 func (this *threePhaseInternal) Update(request []byte) (success bool) {
-	transactionID := string(time.Now().UnixNano())
-	nodes, err := this.ch.GetUpdateSet()
-	if err != nil {
-		return false
-	}
-
-	return this.CommitTx(transactionID, request, nodes)
+	return this.timedTransaction(request, this.ch.GetUpdateSet)
 }
 
 func (this *threePhaseInternal) Delete(request []byte) (success bool) {
-	transactionID := string(time.Now().UnixNano())
-	nodes, err := this.ch.GetDeleteSet()
-	if err != nil {
-		return false
-	}
-
-	return this.CommitTx(transactionID, request, nodes)
+	return this.timedTransaction(request, this.ch.GetDeleteSet)
 }
 
 func (this *threePhaseInternal) CommitTx(transactionid string, data []byte, nodes []string) (success bool) {
+	if data == nil || nodes == nil {
+		log.Printf("invalid operands for comit")
+		return false
+	}
+
 	log.Printf("Starting transaction %s\n", transactionid)
 	transaction := ThreePhaseTransaction{
 		Peers:         nodes,
@@ -156,6 +149,7 @@ func okayCheck(callback func(request []byte, destination string) (ok bool, err e
 		ok, err := callback(data, node)
 		if err != nil {
 			numErr += 1
+			continue
 		}
 
 		if ok {
@@ -200,7 +194,7 @@ func (this *threePhaseInternal) InitializeTransaction(encodedTransaction []byte)
 	}
 
 	this.transactions[transactionid] = &tx
-	//go this.terminationProtocol(transactionid)
+	go this.terminationProtocol(transactionid)
 	// TODO check if anyone got precommit
 
 	return true

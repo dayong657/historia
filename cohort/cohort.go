@@ -16,13 +16,18 @@ func NewDefaultCohort(thishost int, hosts []string) Cohort {
 	mode := NewReadMajorityWriteMajority(len(hosts))
 	ckup := checkup.NewTCPCheckup(hosts)
 	ckup.Start()
+	return NewCohort(thishost, hosts, mode, ckup)
+}
+
+// Creates a new cohort
+func NewCohort(thishost int, hosts []string, mode RWMode, ckup LivenessChecker) Cohort {
 	c := Cohort{mode: mode, ckup: ckup, thishost: hosts[thishost]}
 	return c
 }
 
 type Cohort struct {
 	mode     RWMode
-	ckup     checkup.Checkup
+	ckup     LivenessChecker
 	thishost string
 }
 

@@ -50,7 +50,6 @@ func NewThreePhaseHTTP(thishost int, hosts []string, db storage.Storage) {
 	DoCommit(transactionID string) (ok bool)
 	PreCommit(transactionID string) (ok bool)
 	CheckCommit(transactionID string) (didcommit bool)
-	LocalRead(request []byte) (results []byte, success bool)
 **/
 
 func threePhaseInit(name string, wrapped func(tx []byte) bool) func(w http.ResponseWriter, r *http.Request) {
@@ -130,36 +129,61 @@ func (this threePhaseHTTPImplementation) InitializeTransaction(tx []byte, destin
 	encoded := base64.StdEncoding.EncodeToString(tx)
 
 	resp, err := http.Get("http://" + destination + "/3pc/init/" + url.QueryEscape(encoded))
-	resp.Body.Close()
-	return resp.StatusCode == 200, err
+	if resp != nil {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+		return resp.StatusCode == 200, err
+	}
+	return false, err
 }
 
 // Satisfies the callback interface for 3PC
 func (this threePhaseHTTPImplementation) Abort(tx []byte, destination string) (ok bool, err error) {
 	resp, err := http.Get("http://" + destination + "/3pc/abort/" + string(tx))
-	resp.Body.Close()
-	return resp.StatusCode == 200, err
+	if resp != nil {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+		return resp.StatusCode == 200, err
+	}
+	return false, err
 }
 
 // Satisfies the callback interface for 3PC
 func (this threePhaseHTTPImplementation) DoCommit(tx []byte, destination string) (ok bool, err error) {
 	resp, err := http.Get("http://" + destination + "/3pc/commit/" + string(tx))
-	resp.Body.Close()
-	return resp.StatusCode == 200, err
+	if resp != nil {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+		return resp.StatusCode == 200, err
+	}
+	return false, err
 }
 
 // Satisfies the callback interface for 3PC
 func (this threePhaseHTTPImplementation) PreCommit(tx []byte, destination string) (ok bool, err error) {
 	resp, err := http.Get("http://" + destination + "/3pc/precommit/" + string(tx))
-	resp.Body.Close()
-	return resp.StatusCode == 200, err
+	if resp != nil {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+		return resp.StatusCode == 200, err
+	}
+	return false, err
 }
 
 // Satisfies the callback interface for 3PC
 func (this threePhaseHTTPImplementation) CheckCommit(tx []byte, destination string) (didcommit bool, err error) {
 	resp, err := http.Get("http://" + destination + "/3pc/check/" + string(tx))
-	resp.Body.Close()
-	return resp.StatusCode == 200, err
+	if resp != nil {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+		return resp.StatusCode == 200, err
+	}
+	return false, err
 }
 
 // Satisfies the callback interface for 3PC

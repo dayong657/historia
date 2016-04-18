@@ -2,6 +2,7 @@ package threephase
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 	"time"
 
@@ -47,6 +48,24 @@ func TestInitTransaction(t *testing.T) {
 	}
 }
 
+func TestGetPeersTransaction(t *testing.T) {
+	fakeComm := newFakeComm(testHosts)
+	db := storage.NewInMemoryStorage()
+	tpc := NewThreePhaseCommit(&fakeComm, db, &fakeComm).(*threePhaseInternal)
+
+	if tpc.getPeers("a") != nil {
+		t.Error("Got peers for a non-existant transaction")
+	}
+
+	if !tpc.InitializeTransaction(encodedTransaction) {
+		t.Fatal("Could not initialize the prep transaction")
+	}
+
+	if !reflect.DeepEqual(tpc.getPeers(transactionId), transaction.Peers) {
+		t.Error("Peer sets from getpeers differed")
+	}
+}
+
 func TestAbortTransaction(t *testing.T) {
 	fakeComm := newFakeComm(testHosts)
 	db := storage.NewInMemoryStorage()
@@ -76,6 +95,20 @@ func TestAbortTransaction(t *testing.T) {
 		t.Error("the transaction changed from comitted to non-comitted")
 	}
 
+}
+
+func TestAbortTransactionSuccess(t *testing.T) {
+	fakeComm := newFakeComm(testHosts)
+	db := storage.NewInMemoryStorage()
+	tpc := NewThreePhaseCommit(&fakeComm, db, &fakeComm)
+
+	if !tpc.InitializeTransaction(encodedTransaction) {
+		t.Fatal("Could not get a transaction to a non-abortable  initstate")
+	}
+
+	if !tpc.Abort(transactionId) {
+		t.Error("Could not abort the transaction")
+	}
 }
 
 func TestPrecommitTransaction(t *testing.T) {
@@ -128,6 +161,25 @@ func TestAutoCommit(t *testing.T) {
 		t.Error("the transaction was not auto-committed")
 	}
 }
+
+func TestCommitInvalid(t *testing.T) {
+	fakeComm := newFakeComm(testHosts)
+	db := storage.NewInMemoryStorage()
+	tpc := NewThreePhaseCommit(&fakeComm, db, &fakeComm)
+
+	if tpc.DoCommit("") {
+		t.Error("Committed a non-existant transaction")
+	}
+
+}
+
+/**
+func TestPrecommitTransaction(t *testing.T) {
+	fakeComm := newFakeComm(testHosts)
+	db := storage.NewInMemoryStorage()
+	tpc := NewThreePhaseCommit(&fakeComm, db, &fakeComm)
+
+
 
 /**
 func TestInitTransaction(t *testing.T) {

@@ -114,13 +114,6 @@ func (c *checkupInternal) GetPingInterval() time.Duration {
 	return c.interval
 }
 
-func (c *checkupInternal) GetCheckInterval() time.Duration {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	return c.interval
-}
-
 func (c *checkupInternal) SetTimeout(timeout time.Duration) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -159,27 +152,33 @@ func (c *checkupInternal) hostCheck(host string) {
 		case <-time.After(currentInterval):
 			conn, err := net.DialTimeout(c.netProtocol, host, currentTimeout)
 			c.mutex.RLock()
-			current := c.deadAlive[host]
+			wasAlive := c.deadAlive[host]
 			c.mutex.RUnlock()
 
-			newstate := err == nil
+			isNowAlive := err == nil
 			if err == nil {
 				conn.Close()
 			}
 
-			if current != newstate {
-				c.mutex.Lock()
-				c.deadAlive[host] = newstate
-				c.mutex.Unlock()
-
-				c.mutex.RLock()
-				c.stateChangeCallback(host, newstate)
-				c.mutex.RUnlock()
-			}
+			c.updateState(host, wasAlive, isNowAlive)
 
 		case <-c.closeChannel:
 			return
 		}
+	}
+}
+
+// this is a utility function used in hostCheck, it swaps states and calls the
+// callback
+func (c *checkupInternal) updateState(host string, lastState bool, newState bool) {
+	if lastState != newState {
+		c.mutex.Lock()
+		c.deadAlive[host] = newState
+		c.mutex.Unlock()
+
+		c.mutex.RLock()
+		c.stateChangeCallback(host, newState)
+		c.mutex.RUnlock()
 	}
 }
 

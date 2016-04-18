@@ -40,7 +40,7 @@ func (r readOneWriteAll) NodesNeededToDelete() int {
 }
 
 func NewReadMajorityWriteMajority(numberOfNodes int) RWMode {
-	return readOneWriteAll{numberOfNodes}
+	return rmwm{numberOfNodes}
 }
 
 type rmwm struct {

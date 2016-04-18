@@ -1,6 +1,10 @@
 package storage
 
-import "testing"
+import (
+	"encoding/json"
+	"reflect"
+	"testing"
+)
 
 var (
 	testKey   = []byte("test")
@@ -63,17 +67,62 @@ func TestMemoryAbort(t *testing.T) {
 	}
 }
 
+func TestStats(t *testing.T) {
+	// just make sure stats doesn't crash
+	m := NewInMemoryStorage()
+	m.Stats()
+
+	m.Prepare([]byte{3}, []byte{1, 2})
+	m.Commit([]byte{3})
+	m.Stats()
+}
+
+func TestMemoryPrepareBad(t *testing.T) {
+	m := NewInMemoryStorage()
+	if m.Prepare([]byte{3}, []byte{1, 2}) != true {
+		t.Fatal("Could not prepare a valid request")
+	}
+
+	if m.Prepare([]byte{3}, []byte{1, 2}) == true {
+		t.Fatal("prepared something that was already prepared")
+	}
+
+}
+
+func TestMemoryCommitBad(t *testing.T) {
+	m := NewInMemoryStorage()
+	if m.Commit([]byte{3}) == nil {
+		t.Fatal("Committed a non-existant request")
+	}
+
+}
+
 func TestMemoryMerge(t *testing.T) {
+	expected := make(map[string]interface{})
+	expected["a"] = "b"
+	expected["b"] = "c"
+	actual := make(map[string]interface{})
 
+	inputResponses := [][]byte{
+		[]byte(`{"a":"b"}`),
+		[]byte(`{"b":"c"}`),
+	}
+
+	m := NewInMemoryStorage()
+
+	result, _ := m.Merge([]byte{}, inputResponses)
+
+	err := json.Unmarshal(result, &actual)
+	if err != nil {
+		t.Fatal("merge didn't produce valid JSON")
+	}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatal("didn't merge properly")
+	}
+
+	_, ok := m.Merge([]byte{}, [][]byte{[]byte("INVALID_JSON")})
+	if ok {
+		t.Fatal("merge accepted invalid JSON")
+	}
 }
-
-/**
-type Storage interface {
-	Read(request []byte) (value []byte, ok bool)
-	Commit(transactionID []byte) error
-	Prepare(transactionID, value []byte) bool
-	Abort(transactionID []byte) bool
-	Merge(request []byte, response [][]byte) (result []byte, ok bool)
-}
-
-*/

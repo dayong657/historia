@@ -2,7 +2,7 @@ GO=go
 
 all: main
 
-main: windows_dist darwin_dist linux_dist
+main: linux_dist windows_dist darwin_dist
 
 
 windows_dist: deps

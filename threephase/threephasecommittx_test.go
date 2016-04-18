@@ -153,7 +153,38 @@ func TestCommitTxCommitTimeout(t *testing.T) {
 		map[string]chan string{})
 }
 
-//func (this *threePhaseInternal) CommitTx(transactionid string, data []byte, nodes []string) (success bool) {
+func TestOkayCheck(t *testing.T) {
+	callbackOkay := func(request []byte, destination string) (ok bool, err error) {
+		return true, nil
+	}
+
+	callbackNotOkay := func(request []byte, destination string) (ok bool, err error) {
+		return false, nil
+	}
+
+	callbackError := func(request []byte, destination string) (ok bool, err error) {
+		return true, errors.New("dummy")
+	}
+
+	// expect 3 okays
+	ok, notok, numerr := okayCheck(callbackOkay, []byte{}, []string{"1", "2", "3"})
+	if ok != 3 || notok != 0 || numerr != 0 {
+		t.Error("Bad results for checking okay hosts")
+	}
+
+	// expect 3 notokays
+	ok, notok, numerr = okayCheck(callbackNotOkay, []byte{}, []string{"1", "2", "3"})
+	if ok != 0 || notok != 3 || numerr != 0 {
+		t.Error("Bad results for checking notok hosts")
+	}
+
+	// expect 3 errors
+	ok, notok, numerr = okayCheck(callbackError, []byte{}, []string{"1", "2", "3"})
+	if ok != 0 || notok != 0 || numerr != 3 {
+		t.Error("Bad results for checking error hosts")
+	}
+
+}
 
 /**
 func TestTimeConsuming(t *testing.T) {
@@ -176,6 +207,5 @@ type ThreePhaseCommit interface {
 	DoCommit(transactionID string) (ok bool)
 	PreCommit(transactionID string) (ok bool)
 	CheckCommit(transactionID string) (didcommit bool)
-	LocalRead(request []byte) (results []byte, success bool)
 }
 **/

@@ -16,7 +16,6 @@ type ThreePhaseCommit interface {
 	DoCommit(transactionID string) (ok bool)
 	PreCommit(transactionID string) (ok bool)
 	CheckCommit(transactionID string) (didcommit bool)
-	LocalRead(request []byte) (results []byte, success bool)
 }
 
 func NewThreePhaseCommit(comm CommunicationHandler, db storage.Storage, ch NodeSet) ThreePhaseCommit {
